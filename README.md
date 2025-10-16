@@ -1,6 +1,6 @@
 <div align="center">
 
-# asdf-pants [![Build](https://github.com/michael/asdf-pants/actions/workflows/build.yml/badge.svg)](https://github.com/michael/asdf-pants/actions/workflows/build.yml) [![Lint](https://github.com/michael/asdf-pants/actions/workflows/lint.yml/badge.svg)](https://github.com/michael/asdf-pants/actions/workflows/lint.yml)
+# asdf-pants [![Build](https://github.com/michael-delphos/asdf-pants/actions/workflows/build.yml/badge.svg)](https://github.com/michael-delphos/asdf-pants/actions/workflows/build.yml) [![Lint](https://github.com/michael-delphos/asdf-pants/actions/workflows/lint.yml/badge.svg)](https://github.com/michael-delphos/asdf-pants/actions/workflows/lint.yml)
 
 [pants](https://www.pantsbuild.org) plugin for the [asdf version manager](https://asdf-vm.com).
 
@@ -25,7 +25,7 @@ Plugin:
 ```shell
 asdf plugin add pants
 # or
-asdf plugin add pants https://github.com/michael/asdf-pants.git
+asdf plugin add pants https://github.com/michael-delphos/asdf-pants.git
 ```
 
 pants:
@@ -51,7 +51,7 @@ install & manage versions.
 
 Contributions of any kind welcome! See the [contributing guide](contributing.md).
 
-[Thanks goes to these contributors](https://github.com/michael/asdf-pants/graphs/contributors)!
+[Thanks goes to these contributors](https://github.com/michael-delphos/asdf-pants/graphs/contributors)!
 
 # License
 
