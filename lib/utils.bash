@@ -2,8 +2,8 @@
 
 set -euo pipefail
 
-# TODO: Ensure this is the correct GitHub homepage where releases can be downloaded for pants.
-GH_REPO="https://github.com/pantsbuild/pants"
+# Pants uses scie-pants for binary distribution
+GH_REPO="https://github.com/pantsbuild/scie-pants"
 TOOL_NAME="pants"
 TOOL_TEST="pants --version"
 
@@ -14,7 +14,6 @@ fail() {
 
 curl_opts=(-fsSL)
 
-# NOTE: You might want to remove this if pants is not hosted on GitHub releases.
 if [ -n "${GITHUB_API_TOKEN:-}" ]; then
 	curl_opts=("${curl_opts[@]}" -H "Authorization: token $GITHUB_API_TOKEN")
 fi
@@ -27,25 +26,75 @@ sort_versions() {
 list_github_tags() {
 	git ls-remote --tags --refs "$GH_REPO" |
 		grep -o 'refs/tags/.*' | cut -d/ -f3- |
-		sed 's/^v//' # NOTE: You might want to adapt this sed to remove non-version strings from tags
+		sed 's/^v//'
 }
 
 list_all_versions() {
-	# TODO: Adapt this. By default we simply list the tag names from GitHub releases.
-	# Change this function if pants has other means of determining installable versions.
 	list_github_tags
 }
 
+calculate_os() {
+	local os
+	os="$(uname -s)"
+	if [[ "${os}" =~ [Ll]inux ]]; then
+		echo "linux"
+	elif [[ "${os}" =~ [Dd]arwin ]]; then
+		echo "macos"
+	elif [[ "${os}" =~ [Ww]in|[Mm][Ii][Nn][Gg] ]]; then
+		echo "windows"
+	else
+		fail "Pants is not supported on this operating system (${os})."
+	fi
+}
+
+calculate_arch() {
+	local arch
+	arch="$(uname -m)"
+	if [[ "${arch}" =~ x86[_-]64 ]]; then
+		echo "x86_64"
+	elif [[ "${arch}" =~ arm64|aarch64 ]]; then
+		echo "aarch64"
+	else
+		fail "Pants is not supported for this chip architecture (${arch})."
+	fi
+}
+
 download_release() {
-	local version filename url
+	local version filename url sha256_url
 	version="$1"
 	filename="$2"
 
-	# TODO: Adapt the release URL convention for pants
-	url="$GH_REPO/archive/v${version}.tar.gz"
+	local os arch
+	os="$(calculate_os)"
+	arch="$(calculate_arch)"
 
-	echo "* Downloading $TOOL_NAME release $version..."
+	# Construct the binary name: scie-pants-{OS}-{ARCH}
+	local binary_name="scie-pants-${os}-${arch}"
+	url="$GH_REPO/releases/download/v${version}/${binary_name}"
+	sha256_url="${url}.sha256"
+
+	echo "* Downloading $TOOL_NAME release $version for ${os}-${arch}..."
 	curl "${curl_opts[@]}" -o "$filename" -C - "$url" || fail "Could not download $url"
+
+	# Download and verify SHA256
+	local sha256_file="${filename}.sha256"
+	curl "${curl_opts[@]}" -o "$sha256_file" "$sha256_url" || fail "Could not download $sha256_url"
+
+	# Verify checksum
+	echo "* Verifying checksum..."
+	(
+		cd "$(dirname "$filename")"
+		if command -v sha256sum &>/dev/null; then
+			sha256sum -c --status "$(basename "$sha256_file")" || fail "Checksum verification failed"
+		elif command -v shasum &>/dev/null; then
+			shasum -a 256 -c --status "$(basename "$sha256_file")" || fail "Checksum verification failed"
+		else
+			fail "Neither sha256sum nor shasum found. Cannot verify checksum."
+		fi
+	)
+
+	# Remove the checksum file
+	rm "$sha256_file"
 }
 
 install_version() {
@@ -59,12 +108,14 @@ install_version() {
 
 	(
 		mkdir -p "$install_path"
-		cp -r "$ASDF_DOWNLOAD_PATH"/* "$install_path"
 
-		# TODO: Assert pants executable exists.
-		local tool_cmd
-		tool_cmd="$(echo "$TOOL_TEST" | cut -d' ' -f1)"
-		test -x "$install_path/$tool_cmd" || fail "Expected $install_path/$tool_cmd to be executable."
+		# Copy the pants binary from the download directory
+		local binary_path="$ASDF_DOWNLOAD_PATH/$TOOL_NAME"
+		cp "$binary_path" "$install_path/$TOOL_NAME"
+		chmod +x "$install_path/$TOOL_NAME"
+
+		# Verify the binary is executable
+		test -x "$install_path/$TOOL_NAME" || fail "Expected $install_path/$TOOL_NAME to be executable."
 
 		echo "$TOOL_NAME $version installation was successful!"
 	) || (
