@@ -73,17 +73,22 @@ download_release() {
 	url="$GH_REPO/releases/download/v${version}/${binary_name}"
 	sha256_url="${url}.sha256"
 
+	# Download with original name for checksum verification
+	local download_dir
+	download_dir="$(dirname "$filename")"
+	local temp_file="${download_dir}/${binary_name}"
+
 	echo "* Downloading $TOOL_NAME release $version for ${os}-${arch}..."
-	curl "${curl_opts[@]}" -o "$filename" -C - "$url" || fail "Could not download $url"
+	curl "${curl_opts[@]}" -o "$temp_file" -C - "$url" || fail "Could not download $url"
 
 	# Download and verify SHA256
-	local sha256_file="${filename}.sha256"
+	local sha256_file="${temp_file}.sha256"
 	curl "${curl_opts[@]}" -o "$sha256_file" "$sha256_url" || fail "Could not download $sha256_url"
 
 	# Verify checksum
 	echo "* Verifying checksum..."
 	(
-		cd "$(dirname "$filename")"
+		cd "$download_dir"
 		if command -v sha256sum &>/dev/null; then
 			sha256sum -c --status "$(basename "$sha256_file")" || fail "Checksum verification failed"
 		elif command -v shasum &>/dev/null; then
@@ -92,6 +97,9 @@ download_release() {
 			fail "Neither sha256sum nor shasum found. Cannot verify checksum."
 		fi
 	)
+
+	# Rename to final filename after verification
+	mv "$temp_file" "$filename"
 
 	# Remove the checksum file
 	rm "$sha256_file"
