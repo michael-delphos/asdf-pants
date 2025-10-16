@@ -5,8 +5,8 @@ set -euo pipefail
 # Pants uses scie-pants for binary distribution
 GH_REPO="https://github.com/pantsbuild/scie-pants"
 TOOL_NAME="pants"
-# Use bootstrap-tools boot command which doesn't require a project configuration
-TOOL_TEST="SCIE_BOOT=bootstrap-tools pants"
+# Use update --help command which doesn't require a project configuration
+TOOL_TEST="SCIE_BOOT=update pants --help"
 
 fail() {
 	echo -e "asdf-$TOOL_NAME: $*"
